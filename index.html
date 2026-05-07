@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Manager — Manage Your Products</title>
+  <meta name="description" content="A clean, modern Product Manager UI to add, edit, delete and organise your products locally." />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="app-brand">
+      <div class="brand-icon">📦</div>
+      <span class="brand-name">Product<span>Manager</span></span>
+    </div>
+
+    <div class="header-meta">
+      <span class="product-count-badge" id="productCount">0 Products</span>
+      <button class="btn btn-primary" id="addProductBtn" aria-label="Add new product">
+        <i class="fas fa-plus"></i>
+        <span class="btn-label-full">Add New Product</span>
+        <span class="btn-label-short" style="display:none;">Add</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════ -->
+  <main class="app-main">
+
+    <!-- Toolbar: heading + search -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <h1>Your Products</h1>
+        <p>Manage, edit and organise your product catalogue.</p>
+      </div>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="Search products…"
+          aria-label="Search products"
+        />
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <section class="products-grid" id="productsGrid" aria-label="Products grid">
+      <!-- Cards injected by JS -->
+    </section>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════
+       ADD / EDIT MODAL
+  ═══════════════════════════════════════ -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">Add New Product</h2>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form id="productForm" novalidate>
+
+          <!-- ── Image Upload ── -->
+          <div class="form-group">
+            <label class="form-label" for="imageFile">
+              <i class="fas fa-image"></i>&nbsp; Product Image
+            </label>
+
+            <!-- Upload Zone (shown when no preview) -->
+            <div class="upload-zone" id="uploadZone">
+              <input type="file" id="imageFile" accept="image/*" aria-label="Upload product image" />
+              <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+              <div class="upload-text">Click or drag &amp; drop an image</div>
+              <div class="upload-subtext">PNG, JPG, GIF, WEBP — any size</div>
+            </div>
+
+            <!-- Preview (shown after image chosen) -->
+            <div class="image-preview-wrap" id="imagePreviewWrap">
+              <img id="imagePreview" src="" alt="Image preview" />
+              <button type="button" class="preview-remove" id="previewRemove" aria-label="Remove image">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Product Title ── -->
+          <div class="form-group">
+            <label class="form-label" for="productTitle">
+              <i class="fas fa-tag"></i>&nbsp; Product Title
+            </label>
+            <input
+              type="text"
+              class="form-input"
+              id="productTitle"
+              placeholder="e.g. Wireless Earbuds Pro"
+              maxlength="80"
+              autocomplete="off"
+            />
+            <span class="field-error" id="titleError" role="alert"></span>
+          </div>
+
+          <!-- ── Description ── -->
+          <div class="form-group">
+            <label class="form-label" for="productDesc">
+              <i class="fas fa-align-left"></i>&nbsp; Description
+            </label>
+            <textarea
+              class="form-textarea"
+              id="productDesc"
+              placeholder="Describe your product in a few sentences…"
+              maxlength="500"
+            ></textarea>
+            <span class="field-error" id="descError" role="alert"></span>
+          </div>
+
+          <!-- ── Actions ── -->
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelBtn">
+              <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="fas fa-plus"></i> Add Product
+            </button>
+          </div>
+
+        </form>
+      </div><!-- /modal-body -->
+    </div><!-- /modal -->
+  </div><!-- /modal-overlay -->
+
+  <!-- ═══════════════════════════════════════
+       DELETE CONFIRM DIALOG
+  ═══════════════════════════════════════ -->
+  <div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="confirm-box">
+      <div class="confirm-icon"><i class="fas fa-trash-alt"></i></div>
+      <h3 id="confirmTitle">Delete Product?</h3>
+      <p>This action cannot be undone. The product will be permanently removed from your list.</p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" id="confirmNo">
+          <i class="fas fa-arrow-left"></i> Keep It
+        </button>
+        <button class="btn btn-danger" id="confirmYes">
+          <i class="fas fa-trash-alt"></i> Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       TOAST CONTAINER
+  ═══════════════════════════════════════ -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Script -->
+  <script src="script.js"></script>
+</body>
+</html>
