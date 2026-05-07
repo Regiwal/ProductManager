@@ -1,16 +1,30 @@
 /* =============================================
    PRODUCT MANAGER UI — script.js
+   Firestore-powered (real-time sync)
    ============================================= */
 
 'use strict';
 
+import { db } from './firebase.js';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  query,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 /* ──────────────────────────────────────────────
    State
 ────────────────────────────────────────────── */
-let products = [];
-let editingId = null;          // null = add mode, string = edit mode
+let products    = [];          // live cache from Firestore
+let editingId   = null;        // null = add mode, string = edit mode (Firestore doc ID)
 let pendingDeleteId = null;    // for confirm dialog
-let currentImageData = null;   // base64 or object-URL
+let currentImageData = null;   // base64 data-URL
 
 /* ──────────────────────────────────────────────
    DOM References
@@ -40,26 +54,6 @@ const confirmNo       = document.getElementById('confirmNo');
 const toastContainer  = document.getElementById('toastContainer');
 
 /* ──────────────────────────────────────────────
-   LocalStorage Helpers
-────────────────────────────────────────────── */
-function saveToStorage() {
-  try {
-    localStorage.setItem('pm_products', JSON.stringify(products));
-  } catch (e) {
-    console.warn('localStorage not available:', e);
-  }
-}
-
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem('pm_products');
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-/* ──────────────────────────────────────────────
    Toast Notifications
 ────────────────────────────────────────────── */
 function showToast(message, type = 'success', duration = 3000) {
@@ -73,6 +67,17 @@ function showToast(message, type = 'success', duration = 3000) {
     toast.classList.add('removing');
     toast.addEventListener('animationend', () => toast.remove());
   }, duration);
+}
+
+/* ──────────────────────────────────────────────
+   Loading State
+────────────────────────────────────────────── */
+function showLoadingState() {
+  grid.innerHTML = `
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Connecting to Firestore…</p>
+    </div>`;
 }
 
 /* ──────────────────────────────────────────────
@@ -108,9 +113,12 @@ function buildCard(product) {
   card.className = 'product-card';
   card.dataset.id = product.id;
 
-  const formattedDate = new Date(product.createdAt).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
-  });
+  // createdAt may be a Firestore Timestamp or an ISO string
+  let dateStr = '';
+  if (product.createdAt) {
+    const ts = product.createdAt.toDate ? product.createdAt.toDate() : new Date(product.createdAt);
+    dateStr = ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
   const imgSrc = product.image || generatePlaceholder(product.title);
 
@@ -127,7 +135,7 @@ function buildCard(product) {
       <div class="card-description">${escHtml(product.description)}</div>
     </div>
     <div class="card-footer">
-      <span class="card-date"><i class="far fa-calendar"></i>${formattedDate}</span>
+      <span class="card-date"><i class="far fa-calendar"></i>${dateStr}</span>
       <button class="btn-delete" title="Delete product" onclick="requestDelete('${product.id}')">
         <i class="fas fa-trash-alt"></i> Delete
       </button>
@@ -194,7 +202,6 @@ function openEditModal(id) {
   titleInput.value = product.title;
   descInput.value  = product.description;
 
-  // Show existing image preview
   if (product.image) {
     showPreview(product.image);
   } else {
@@ -290,9 +297,11 @@ function hidePreview() {
 }
 
 /* ──────────────────────────────────────────────
-   Add / Update Product
+   Firestore CRUD
 ────────────────────────────────────────────── */
-function handleSubmit(e) {
+const productsCol = collection(db, 'products');
+
+async function handleSubmit(e) {
   e.preventDefault();
   if (!validateForm()) return;
 
@@ -300,31 +309,31 @@ function handleSubmit(e) {
   const description = descInput.value.trim();
   const image       = currentImageData || null;
 
-  if (editingId) {
-    // ── Edit Mode ──
-    const idx = products.findIndex(p => p.id === editingId);
-    if (idx === -1) return;
-    products[idx] = { ...products[idx], title, description, image };
-    saveToStorage();
-    renderGrid(getFilteredList());
-    updateCount();
-    closeModal();
-    showToast('Product updated successfully!', 'info');
-  } else {
-    // ── Add Mode ──
-    const newProduct = {
-      id:          crypto.randomUUID(),
-      title,
-      description,
-      image,
-      createdAt:   new Date().toISOString()
-    };
-    products.unshift(newProduct);
-    saveToStorage();
-    renderGrid(getFilteredList());
-    updateCount();
-    closeModal();
-    showToast('Product added successfully!', 'success');
+  // Disable submit button to prevent double-click
+  submitBtn.disabled = true;
+
+  try {
+    if (editingId) {
+      // ── Edit Mode ──
+      await updateDoc(doc(db, 'products', editingId), { title, description, image });
+      closeModal();
+      showToast('Product updated successfully!', 'info');
+    } else {
+      // ── Add Mode ──
+      await addDoc(productsCol, {
+        title,
+        description,
+        image,
+        createdAt: serverTimestamp()
+      });
+      closeModal();
+      showToast('Product added successfully!', 'success');
+    }
+  } catch (err) {
+    console.error('Firestore write error:', err);
+    showToast('Failed to save. Check your connection.', 'error');
+  } finally {
+    submitBtn.disabled = false;
   }
 }
 
@@ -343,14 +352,17 @@ function closeConfirm() {
   document.body.style.overflow = '';
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pendingDeleteId) return;
-  products = products.filter(p => p.id !== pendingDeleteId);
-  saveToStorage();
-  renderGrid(getFilteredList());
-  updateCount();
+  const idToDelete = pendingDeleteId;
   closeConfirm();
-  showToast('Product deleted.', 'error');
+  try {
+    await deleteDoc(doc(db, 'products', idToDelete));
+    showToast('Product deleted.', 'error');
+  } catch (err) {
+    console.error('Firestore delete error:', err);
+    showToast('Failed to delete. Check your connection.', 'error');
+  }
 }
 
 /* ──────────────────────────────────────────────
@@ -431,11 +443,29 @@ document.addEventListener('keydown', (e) => {
 // Search
 searchInput.addEventListener('input', () => renderGrid(getFilteredList()));
 
+// Expose helpers for inline onclick attributes in rendered cards
+window.openAddModal  = openAddModal;
+window.openEditModal = openEditModal;
+window.requestDelete = requestDelete;
+
 /* ──────────────────────────────────────────────
-   Initialise
+   Initialise — Real-time Firestore listener
 ────────────────────────────────────────────── */
 (function init() {
-  products = loadFromStorage();
-  updateCount();
-  renderGrid();
+  showLoadingState();
+
+  const q = query(productsCol, orderBy('createdAt', 'desc'));
+
+  onSnapshot(q, (snapshot) => {
+    products = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
+    updateCount();
+    renderGrid(getFilteredList());
+  }, (err) => {
+    console.error('Firestore listener error:', err);
+    showToast('Could not connect to Firestore. Check console.', 'error');
+    renderGrid([]);
+  });
 })();

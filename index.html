@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Product Manager — Manage Your Products</title>
-  <meta name="description" content="A clean, modern Product Manager UI to add, edit, delete and organise your products locally." />
+  <meta name="description"
+    content="A clean, modern Product Manager UI to add, edit, delete and organise your products locally." />
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -15,6 +17,7 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <!-- ═══════════════════════════════════════
@@ -22,7 +25,7 @@
   ═══════════════════════════════════════ -->
   <header class="app-header">
     <div class="app-brand">
-      <div class="brand-icon">📦</div>
+      <!-- <div class="brand-icon"></div> -->
       <span class="brand-name">Product<span>Manager</span></span>
     </div>
 
@@ -50,13 +53,8 @@
 
       <div class="search-bar">
         <i class="fas fa-search"></i>
-        <input
-          type="text"
-          class="search-input"
-          id="searchInput"
-          placeholder="Search products…"
-          aria-label="Search products"
-        />
+        <input type="text" class="search-input" id="searchInput" placeholder="Search products…"
+          aria-label="Search products" />
       </div>
     </div>
 
@@ -111,14 +109,8 @@
             <label class="form-label" for="productTitle">
               <i class="fas fa-tag"></i>&nbsp; Product Title
             </label>
-            <input
-              type="text"
-              class="form-input"
-              id="productTitle"
-              placeholder="e.g. Wireless Earbuds Pro"
-              maxlength="80"
-              autocomplete="off"
-            />
+            <input type="text" class="form-input" id="productTitle" placeholder="e.g. Wireless Earbuds Pro"
+              maxlength="80" autocomplete="off" />
             <span class="field-error" id="titleError" role="alert"></span>
           </div>
 
@@ -127,12 +119,8 @@
             <label class="form-label" for="productDesc">
               <i class="fas fa-align-left"></i>&nbsp; Description
             </label>
-            <textarea
-              class="form-textarea"
-              id="productDesc"
-              placeholder="Describe your product in a few sentences…"
-              maxlength="500"
-            ></textarea>
+            <textarea class="form-textarea" id="productDesc" placeholder="Describe your product in a few sentences…"
+              maxlength="500"></textarea>
             <span class="field-error" id="descError" role="alert"></span>
           </div>
 
@@ -175,7 +163,8 @@
   ═══════════════════════════════════════ -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-  <!-- Script -->
-  <script src="script.js"></script>
+  <!-- Script (ES module — required for Firebase SDK imports) -->
+  <script type="module" src="script.js"></script>
 </body>
+
 </html>
