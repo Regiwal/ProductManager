@@ -1,101 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Product Manager — Manage Your Products</title>
-  <meta name="description"
-    content="A clean, modern Product Manager UI to add, edit, delete and organise your products locally." />
-
-  <!-- Font Awesome -->
+  <meta name="description" content="A modern Product Manager with per-user data, recycle bin, and real-time Firestore sync." />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
   <!-- ═══════════════════════════════════════
-       HEADER
+       AUTH SCREEN
   ═══════════════════════════════════════ -->
-  <header class="app-header">
-    <div class="app-brand">
-      <!-- <div class="brand-icon"></div> -->
-      <span class="brand-name">Product<span>Manager</span></span>
-    </div>
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
 
-    <div class="header-meta">
-      <span class="product-count-badge" id="productCount">0 Products</span>
-      <button class="btn btn-primary" id="addProductBtn" aria-label="Add new product">
-        <i class="fas fa-plus"></i>
-        <span class="btn-label-full">Add New Product</span>
-        <span class="btn-label-short" style="display:none;">Add</span>
-      </button>
+      <div class="auth-brand">
+        <div class="brand-icon">📦</div>
+        <span class="brand-name">Product<span>Manager</span></span>
+      </div>
+      <p class="auth-tagline">Sign in to manage your personal product catalogue.</p>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabSignIn">Sign In</button>
+        <button class="auth-tab"        id="tabSignUp">Sign Up</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signInForm" class="auth-form" novalidate>
+        <div class="auth-form-group">
+          <label for="siEmail"><i class="fas fa-envelope"></i> Email</label>
+          <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="auth-form-group">
+          <label for="siPassword"><i class="fas fa-lock"></i> Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="siPassword" placeholder="Your password" autocomplete="current-password" />
+            <button type="button" class="pw-toggle" data-target="siPassword" aria-label="Toggle password"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="auth-error" id="signInError"></div>
+        <button type="submit" class="btn btn-primary btn-full" id="signInBtn">
+          <i class="fas fa-sign-in-alt"></i> Sign In
+        </button>
+      </form>
+
+      <!-- Sign Up Form -->
+      <form id="signUpForm" class="auth-form hidden" novalidate>
+        <div class="auth-form-group">
+          <label for="suEmail"><i class="fas fa-envelope"></i> Email</label>
+          <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="auth-form-group">
+          <label for="suPassword"><i class="fas fa-lock"></i> Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
+            <button type="button" class="pw-toggle" data-target="suPassword" aria-label="Toggle password"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="auth-form-group">
+          <label for="suConfirm"><i class="fas fa-lock"></i> Confirm Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="suConfirm" placeholder="Re-enter password" autocomplete="new-password" />
+            <button type="button" class="pw-toggle" data-target="suConfirm" aria-label="Toggle password"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="auth-error" id="signUpError"></div>
+        <button type="submit" class="btn btn-primary btn-full" id="signUpBtn">
+          <i class="fas fa-user-plus"></i> Create Account
+        </button>
+      </form>
+
     </div>
-  </header>
+  </div>
+
 
   <!-- ═══════════════════════════════════════
-       MAIN CONTENT
+       APP WRAPPER  (shown after sign-in)
   ═══════════════════════════════════════ -->
-  <main class="app-main">
+  <div id="appWrapper" class="app-wrapper hidden">
 
-    <!-- Toolbar: heading + search -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <h1>Your Products</h1>
-        <p>Manage, edit and organise your product catalogue.</p>
+    <!-- ── Sidebar backdrop (mobile) ── -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ══ LEFT SIDEBAR ══ -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="sidebar-top">
+        <div class="app-brand">
+          <div class="brand-icon">📦</div>
+          <span class="brand-name">Product<span>Manager</span></span>
+        </div>
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
-      <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="text" class="search-input" id="searchInput" placeholder="Search products…"
-          aria-label="Search products" />
+      <nav class="sidebar-nav">
+        <button class="nav-item active" id="navProducts" data-view="products">
+          <i class="fas fa-boxes"></i>
+          <span>All Products</span>
+        </button>
+        <button class="nav-item" id="navRecycle" data-view="recycle">
+          <i class="fas fa-trash-restore"></i>
+          <span>Recycle Bin</span>
+          <span class="nav-badge hidden" id="recycleBadge">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-bottom">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-details">
+            <span class="user-email" id="userEmail">...</span>
+            <span class="user-label">Signed in</span>
+          </div>
+        </div>
+        <button class="btn-signout" id="signOutBtn">
+          <i class="fas fa-sign-out-alt"></i> Sign Out
+        </button>
       </div>
-    </div>
 
-    <!-- Products Grid -->
-    <section class="products-grid" id="productsGrid" aria-label="Products grid">
-      <!-- Cards injected by JS -->
-    </section>
+    </aside>
 
-  </main>
+    <!-- ══ MAIN CONTENT ══ -->
+    <div class="app-content">
+
+      <!-- HEADER -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="app-brand header-brand">
+            <div class="brand-icon small">📦</div>
+            <span class="brand-name">Product<span>Manager</span></span>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span class="product-count-badge" id="productCount">0 Products</span>
+          <button class="btn btn-primary" id="addProductBtn" aria-label="Add new product">
+            <i class="fas fa-plus"></i>
+            <span class="btn-label-full">Add New Product</span>
+            <span class="btn-label-short" style="display:none;">Add</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- MAIN -->
+      <main class="app-main">
+
+        <!-- ── All Products View ── -->
+        <div id="viewProducts" class="view">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <h1>Your Products</h1>
+              <p>Manage, edit and organise your product catalogue.</p>
+            </div>
+            <div class="search-bar">
+              <i class="fas fa-search"></i>
+              <input type="text" class="search-input" id="searchInput"
+                placeholder="Search products…" aria-label="Search products" />
+            </div>
+          </div>
+          <section class="products-grid" id="productsGrid" aria-label="Products grid"></section>
+        </div>
+
+        <!-- ── Recycle Bin View ── -->
+        <div id="viewRecycle" class="view hidden">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <h1>🗑️ Recycle Bin</h1>
+              <p>Deleted products are kept for <strong>30 days</strong> before being permanently removed.</p>
+            </div>
+            <button class="btn btn-danger" id="emptyBinBtn" style="display:none;">
+              <i class="fas fa-fire-alt"></i> Empty Bin
+            </button>
+          </div>
+          <section class="products-grid" id="recycleGrid" aria-label="Recycle bin grid"></section>
+        </div>
+
+      </main>
+    </div><!-- /app-content -->
+  </div><!-- /appWrapper -->
+
 
   <!-- ═══════════════════════════════════════
        ADD / EDIT MODAL
   ═══════════════════════════════════════ -->
   <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
-
       <div class="modal-header">
         <h2 class="modal-title" id="modalTitle">Add New Product</h2>
         <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">
           <i class="fas fa-times"></i>
         </button>
       </div>
-
       <div class="modal-body">
         <form id="productForm" novalidate>
 
-          <!-- ── Image Upload ── -->
           <div class="form-group">
             <label class="form-label" for="imageFile">
               <i class="fas fa-image"></i>&nbsp; Product Image
             </label>
-
-            <!-- Upload Zone (shown when no preview) -->
             <div class="upload-zone" id="uploadZone">
               <input type="file" id="imageFile" accept="image/*" aria-label="Upload product image" />
               <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
               <div class="upload-text">Click or drag &amp; drop an image</div>
               <div class="upload-subtext">PNG, JPG, GIF, WEBP — any size</div>
             </div>
-
-            <!-- Preview (shown after image chosen) -->
             <div class="image-preview-wrap" id="imagePreviewWrap">
               <img id="imagePreview" src="" alt="Image preview" />
               <button type="button" class="preview-remove" id="previewRemove" aria-label="Remove image">
@@ -104,27 +224,24 @@
             </div>
           </div>
 
-          <!-- ── Product Title ── -->
           <div class="form-group">
             <label class="form-label" for="productTitle">
               <i class="fas fa-tag"></i>&nbsp; Product Title
             </label>
-            <input type="text" class="form-input" id="productTitle" placeholder="e.g. Wireless Earbuds Pro"
-              maxlength="80" autocomplete="off" />
+            <input type="text" class="form-input" id="productTitle"
+              placeholder="e.g. Wireless Earbuds Pro" maxlength="80" autocomplete="off" />
             <span class="field-error" id="titleError" role="alert"></span>
           </div>
 
-          <!-- ── Description ── -->
           <div class="form-group">
             <label class="form-label" for="productDesc">
               <i class="fas fa-align-left"></i>&nbsp; Description
             </label>
-            <textarea class="form-textarea" id="productDesc" placeholder="Describe your product in a few sentences…"
-              maxlength="500"></textarea>
+            <textarea class="form-textarea" id="productDesc"
+              placeholder="Describe your product in a few sentences…" maxlength="500"></textarea>
             <span class="field-error" id="descError" role="alert"></span>
           </div>
 
-          <!-- ── Actions ── -->
           <div class="modal-actions">
             <button type="button" class="btn btn-secondary" id="cancelBtn">
               <i class="fas fa-times"></i> Cancel
@@ -135,9 +252,10 @@
           </div>
 
         </form>
-      </div><!-- /modal-body -->
-    </div><!-- /modal -->
-  </div><!-- /modal-overlay -->
+      </div>
+    </div>
+  </div>
+
 
   <!-- ═══════════════════════════════════════
        DELETE CONFIRM DIALOG
@@ -145,18 +263,19 @@
   <div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <div class="confirm-box">
       <div class="confirm-icon"><i class="fas fa-trash-alt"></i></div>
-      <h3 id="confirmTitle">Delete Product?</h3>
-      <p>This action cannot be undone. The product will be permanently removed from your list.</p>
+      <h3 id="confirmTitle">Move to Recycle Bin?</h3>
+      <p>This product will be moved to the Recycle Bin and <strong>permanently removed after 30 days</strong>.</p>
       <div class="confirm-actions">
         <button class="btn btn-secondary" id="confirmNo">
           <i class="fas fa-arrow-left"></i> Keep It
         </button>
         <button class="btn btn-danger" id="confirmYes">
-          <i class="fas fa-trash-alt"></i> Yes, Delete
+          <i class="fas fa-trash-alt"></i> Move to Bin
         </button>
       </div>
     </div>
   </div>
+
 
   <!-- ═══════════════════════════════════════
        TOAST CONTAINER
@@ -165,6 +284,6 @@
 
   <!-- Script (ES module — required for Firebase SDK imports) -->
   <script type="module" src="script.js"></script>
-</body>
 
+</body>
 </html>
